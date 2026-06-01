@@ -266,3 +266,267 @@ img.squeeze() → (28, 28)
   ↓
 plt.imshow(..., cmap="gray")  → グレースケールで描画
 ```
+
+---
+
+---
+
+# カスタムデータセットの準備・作成・読み込み
+
+`create_custom_dataset.py` では、自分で用意した画像ファイルと CSV を使って独自のデータセットを作る方法を実装しています。
+
+---
+
+## 5. 必要なファイルの準備
+
+カスタムデータセットを使うには、あらかじめ **2 種類のファイル** を用意します。
+
+### 5.1 ディレクトリ構造
+
+```
+プロジェクト/
+├── data/
+│   ├── annotations.csv       ← 画像ファイル名とラベルの対応表
+│   └── images/               ← 画像ファイルを入れるディレクトリ
+│       ├── tshirt1.jpg
+│       ├── tshirt2.jpg
+│       ├── sandal1.jpg
+│       └── ankleboot1.jpg
+└── create_custom_dataset.py
+```
+
+### 5.2 アノテーション CSV の形式
+
+CSV の **1 列目に画像ファイル名**、**2 列目にラベル（整数）** を記載します。
+
+```
+tshirt1.jpg,0
+tshirt2.jpg,0
+pullover1.jpg,2
+sandal1.jpg,5
+ankleboot1.jpg,9
+```
+
+| 列 | 内容 | コード内での参照 |
+|----|------|----------------|
+| 0 列目（1 列目） | 画像ファイル名 | `self.img_labels.iloc[idx, 0]` |
+| 1 列目（2 列目） | ラベル（整数） | `self.img_labels.iloc[idx, 1]` |
+
+> `iloc[行番号, 列番号]` は pandas の**位置ベース**のアクセスです。列名ではなく左から何番目かで指定します。
+
+ラベルの整数値と意味の対応は自分で決めます（例: 0=猫、1=犬、など）。
+
+---
+
+## 6. CustomImageDataset クラスの処理
+
+```python
+class CustomImageDataset(Dataset):
+    def __init__(self, annotations_file, img_dir, transform=None, target_transform=None):
+        ...
+    def __len__(self):
+        ...
+    def __getitem__(self, idx):
+        ...
+```
+
+PyTorch の `Dataset` クラスを継承し、**3 つのメソッドを実装する** のがルールです。
+
+| メソッド | 呼ばれるタイミング | 役割 |
+|----------|------------------|------|
+| `__init__` | インスタンス生成時（1 回だけ） | CSV の読み込みとパスの保存 |
+| `__len__` | `len(dataset)` を呼んだとき | データ総数を返す |
+| `__getitem__` | `dataset[i]` でアクセスしたとき | i 番目の画像とラベルを返す |
+
+### 6.1 `__init__` — 初期化処理
+
+```python
+def __init__(self, annotations_file, img_dir, transform=None, target_transform=None):
+    self.img_labels = pd.read_csv(annotations_file)
+    self.img_dir = img_dir
+    self.transform = transform
+    self.target_transform = target_transform
+```
+
+インスタンス生成時に **1 回だけ** 実行されます。画像ファイルはここでは読みません。
+
+```
+pd.read_csv("data/annotations.csv")
+
+   → DataFrame として self.img_labels に格納される
+
+         0列目(ファイル名)   1列目(ラベル)
+   行0:   tshirt1.jpg         0
+   行1:   tshirt2.jpg         0
+   行2:   sandal1.jpg         5
+   行3:   ankleboot1.jpg      9
+```
+
+各引数の用途：
+
+| 引数 | 型 | 用途 |
+|------|-----|------|
+| `annotations_file` | `str` | CSV ファイルのパス |
+| `img_dir` | `str` | 画像が入っているディレクトリのパス |
+| `transform` | callable / `None` | 画像に適用する変換（省略可） |
+| `target_transform` | callable / `None` | ラベルに適用する変換（省略可） |
+
+### 6.2 `__len__` — データ総数を返す
+
+```python
+def __len__(self):
+    return len(self.img_labels)
+```
+
+`len(dataset)` と書いたときに呼ばれ、DataFrame の行数（= 画像の枚数）を返します。
+
+```
+CSV に 4 行あれば → len(dataset) → 4
+```
+
+DataLoader がシャッフルや分割をするときにもこの値を使います。
+
+### 6.3 `__getitem__` — i 番目のデータを取り出す
+
+```python
+def __getitem__(self, idx):
+    img_path = os.path.join(self.img_dir, self.img_labels.iloc[idx, 0])
+    image = decode_image(img_path)
+    label = self.img_labels.iloc[idx, 1]
+    if self.transform:
+        image = self.transform(image)
+    if self.target_transform:
+        label = self.target_transform(label)
+    return image, label
+```
+
+`dataset[i]` と書いたときに呼ばれます。流れを 1 ステップずつ追います。
+
+#### ステップ 1: 画像ファイルのパスを組み立てる
+
+```python
+img_path = os.path.join(self.img_dir, self.img_labels.iloc[idx, 0])
+```
+
+```
+idx = 2 のとき:
+
+  self.img_labels.iloc[2, 0]  →  "sandal1.jpg"   (CSV の 2 行目 0 列目)
+
+  os.path.join("data/images", "sandal1.jpg")
+    →  "data/images/sandal1.jpg"
+```
+
+`os.path.join` を使うことで、OS の違い（`/` と `\`）を吸収した安全なパス結合ができます。
+
+#### ステップ 2: 画像をテンソルとして読み込む
+
+```python
+image = decode_image(img_path)
+```
+
+`torchvision.io.decode_image` は画像ファイル（JPEG・PNG など）を直接 **Tensor** として読み込みます。
+
+```
+"data/images/sandal1.jpg"
+  → Tensor, shape=(C, H, W), dtype=uint8
+
+  例: カラー画像 100×100px の場合 → shape=(3, 100, 100)
+      グレースケール画像の場合    → shape=(1, H, W)
+```
+
+PIL Image を経由しないため変換ステップが少なく高速です。
+
+#### ステップ 3: ラベルを取り出す
+
+```python
+label = self.img_labels.iloc[idx, 1]
+```
+
+```
+idx = 2 のとき:
+
+  self.img_labels.iloc[2, 1]  →  5   (CSV の 2 行目 1 列目)
+```
+
+#### ステップ 4: Transform を適用する（設定した場合のみ）
+
+```python
+if self.transform:
+    image = self.transform(image)
+if self.target_transform:
+    label = self.target_transform(label)
+```
+
+`transform` が `None` でなければ画像に、`target_transform` が `None` でなければラベルに変換を適用します。
+
+```
+transform あり:
+  image (uint8 Tensor) → transform → float32 Tensor（正規化済み）など
+
+target_transform あり:
+  label (int) → target_transform → one-hot ベクトルなど
+```
+
+#### ステップ 5: 画像とラベルをタプルで返す
+
+```python
+return image, label
+```
+
+```
+dataset[2]  →  (Tensor(shape=C×H×W), 5)
+               画像テンソル   ラベル整数
+```
+
+---
+
+## 7. 実際の使い方
+
+```python
+from torchvision.transforms import v2
+
+transform = v2.Compose([
+    v2.ToDtype(torch.float32, scale=True)
+])
+
+dataset = CustomImageDataset(
+    annotations_file="data/annotations.csv",
+    img_dir="data/images",
+    transform=transform
+)
+
+# データ総数を確認
+print(len(dataset))          # → 4（CSVの行数）
+
+# インデックスで取り出す
+img, label = dataset[0]
+print(img.shape)             # → torch.Size([C, H, W])
+print(label)                 # → 0
+```
+
+---
+
+## カスタムデータセット 処理フロー まとめ
+
+```
+【準備】
+  annotations.csv（ファイル名, ラベル）
+  data/images/（画像ファイル群）
+
+  ↓ CustomImageDataset(...) でインスタンス生成
+
+【__init__】
+  pd.read_csv → DataFrame (self.img_labels) に全行を読み込む
+  img_dir, transform を保存
+
+  ↓ dataset[idx] でアクセス
+
+【__getitem__】
+  iloc[idx, 0] → ファイル名
+  os.path.join(img_dir, ファイル名) → フルパス
+  decode_image(フルパス) → Tensor (C, H, W), uint8
+  iloc[idx, 1] → ラベル (int)
+  transform があれば適用 → Tensor (C, H, W), float32
+  return (image, label)
+```

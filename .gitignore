@@ -219,3 +219,6 @@ __marimo__/
 
 # Torch Tutorial data
 data
+pytorch-learning/src/basic/.DS_Store
+.gitignore
+pytorch-learning/src/basic/03_transforms/.DS_Store
