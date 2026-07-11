@@ -1,0 +1,16 @@
+{
+    "hooks": {
+        "PermissionRequest": [
+            {
+                "matcher": "",
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": "python3 /Volumes/AMA_WB_SSD_1TB/workspace/claude_workspace/claude_remote_authority_notification/hooks/permission_hook.py",
+                        "timeout": 310
+                    }
+                ]
+            }
+        ]
+    }
+}

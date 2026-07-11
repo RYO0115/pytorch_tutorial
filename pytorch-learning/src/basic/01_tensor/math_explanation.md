@@ -392,3 +392,166 @@ $$
 | `tensor.pow(2)` | $A^{\odot 2}$ | 要素ごとのべき乗 |
 | `tensor[:, 1]` | $\mathbf{a}_{:,1}$ | 列ベクトルの抽出 |
 | `tensor.T` | $A^\top$ | 転置 |
+
+---
+
+## 7. 偏微分（Partial Derivative）
+
+> **DL を理解するうえで最も重要な数学概念のひとつ。**
+> パラメータの「更新方向」を決めるためにどうしても必要になります。
+
+---
+
+### 7.1 偏微分とは何か
+
+複数の変数を持つ関数で、**注目する変数以外をすべて定数とみなして微分する**操作です。
+
+$$\frac{\partial f}{\partial x} \quad \text{（「x で偏微分する」と読む）}$$
+
+#### 具体例
+
+$$f(w, b) = w^2 + w \cdot b + b^2$$
+
+$w$ で偏微分する（$b$ を定数扱い）：
+
+$$\frac{\partial f}{\partial w} = 2w + b$$
+
+$b$ で偏微分する（$w$ を定数扱い）：
+
+$$\frac{\partial f}{\partial b} = w + 2b$$
+
+#### 偏微分の直感的な意味
+
+> **「$w$ を少しだけ増やすと $f$ はどれだけ変わるか？」の割合**
+
+$$\frac{\partial f}{\partial w} \approx \frac{f(w + \varepsilon, b) - f(w, b)}{\varepsilon} \quad (\varepsilon \to 0)$$
+
+| $\frac{\partial f}{\partial w}$ の値 | 意味 |
+|:---:|:---|
+| 正（$+$） | $w$ を増やすと $f$ が増える |
+| 負（$-$） | $w$ を増やすと $f$ が減る |
+| $0$ | $w$ を変えても $f$ は変わらない |
+
+---
+
+### 7.2 DL で偏微分が必要な理由
+
+ニューラルネットワークの学習は **「損失関数 $L$ を最小化すること」** です。
+
+```
+損失関数 L は重み w とバイアス b の関数：
+
+L = L(w_{00}, w_{01}, ..., w_{54}, b_0, b_1, b_2)
+        ↑
+    back_propagation.py の例では
+    w は shape(5,3) → 15個の変数
+    b は shape(3)   →  3個の変数
+    合計18個の変数を持つ関数
+```
+
+**どのパラメータをどの方向に・どれだけ動かすと $L$ が小さくなるか**、
+これを知るためには「各パラメータに対する $L$ の偏微分」が必要です。
+
+$$\frac{\partial L}{\partial w_{00}}, \quad \frac{\partial L}{\partial w_{01}}, \quad \ldots, \quad \frac{\partial L}{\partial b_2}$$
+
+---
+
+### 7.3 DL での具体的な使われ方：勾配降下法
+
+偏微分を使ってパラメータを更新するアルゴリズムを **勾配降下法** といいます。
+
+$$w \leftarrow w - \alpha \cdot \frac{\partial L}{\partial w}$$
+
+$$b \leftarrow b - \alpha \cdot \frac{\partial L}{\partial b}$$
+
+- $\alpha$：学習率（learning rate）。更新の大きさを調整する定数
+- 偏微分が**正** → $w$ を増やすと $L$ が増える → $w$ を**減らす**（$-$ をかける）
+- 偏微分が**負** → $w$ を増やすと $L$ が減る → $w$ を**増やす**（$-$ をかける）
+
+これを繰り返すことで損失が小さくなる方向へパラメータが更新されていきます。
+
+```
+初期値 w （ランダム）
+  ↓ 勾配 ∂L/∂w を計算
+  ↓ w ← w - α * ∂L/∂w　（小さくなる方向へ移動）
+  ↓ また ∂L/∂w を計算
+  ↓ w ← w - α * ∂L/∂w
+  ↓ ...繰り返す
+最小値付近の w に収束
+```
+
+---
+
+### 7.4 back_propagation.py の例での計算
+
+`back_propagation.py` の1層ネットワーク：
+
+```python
+x = torch.ones(5)              # 入力
+y = torch.zeros(3)             # 正解ラベル
+w = torch.randn(5, 3, requires_grad=True)
+b = torch.randn(3, requires_grad=True)
+z = torch.matmul(x, w) + b    # z = xW + b
+loss = BCE(z, y)               # 損失
+```
+
+必要な偏微分は：
+
+$$\frac{\partial L}{\partial w_{ij}} \quad (i=0..4,\ j=0..2) \quad \text{と} \quad \frac{\partial L}{\partial b_j} \quad (j=0..2)$$
+
+連鎖律（Chain Rule）を使って分解します：
+
+$$\frac{\partial L}{\partial w_{ij}} = \underbrace{\frac{\partial L}{\partial z_j}}_{\text{BCE の微分}} \cdot \underbrace{\frac{\partial z_j}{\partial w_{ij}}}_{= x_i}$$
+
+$$\frac{\partial L}{\partial b_j} = \underbrace{\frac{\partial L}{\partial z_j}}_{\text{BCE の微分}} \cdot \underbrace{\frac{\partial z_j}{\partial b_j}}_{= 1}$$
+
+> **連鎖律**：$L = f(z)$、$z = g(w)$ のとき $\dfrac{\partial L}{\partial w} = \dfrac{\partial L}{\partial z} \cdot \dfrac{\partial z}{\partial w}$
+
+PyTorch はこの計算を `loss.backward()` で自動的に行い、結果を `.grad` に格納します。
+
+```python
+loss.backward()
+
+print(w.grad)   # ∂L/∂w  shape(5,3)
+print(b.grad)   # ∂L/∂b  shape(3)
+```
+
+---
+
+### 7.5 勾配ベクトル（Gradient Vector）
+
+複数の偏微分をまとめたものを **勾配ベクトル**（または単に勾配）といいます。
+
+$$\nabla_w L = \begin{pmatrix} \frac{\partial L}{\partial w_{00}} & \frac{\partial L}{\partial w_{01}} & \frac{\partial L}{\partial w_{02}} \\ \vdots & \vdots & \vdots \\ \frac{\partial L}{\partial w_{40}} & \frac{\partial L}{\partial w_{41}} & \frac{\partial L}{\partial w_{42}} \end{pmatrix} \in \mathbb{R}^{5 \times 3}$$
+
+これがそのまま PyTorch の `w.grad`（shape(5,3)）に対応します。
+
+| PyTorch | 数学 | 意味 |
+|:---|:---|:---|
+| `w.grad` | $\nabla_w L$ | $w$ の各要素に対する $L$ の偏微分行列 |
+| `b.grad` | $\nabla_b L$ | $b$ の各要素に対する $L$ の偏微分ベクトル |
+| `loss.backward()` | 連鎖律による $\nabla L$ の計算 | 計算グラフを逆向きに辿って全偏微分を計算 |
+
+---
+
+### 7.6 DL の学習ループにおける偏微分の位置づけ
+
+```
+① 順伝播：入力 → ネットワーク → 損失 L を計算
+           （計算グラフを構築）
+
+② 逆伝播：loss.backward()
+           ↓ 連鎖律で ∂L/∂w, ∂L/∂b を自動計算（偏微分）
+
+③ パラメータ更新：勾配降下法
+           w ← w - α * ∂L/∂w
+           b ← b - α * ∂L/∂b
+
+④ 勾配リセット：w.grad.zero_()
+                次のステップのために勾配をクリア
+
+⑤ ① に戻る
+```
+
+**偏微分は「どこに向かってパラメータを動かすか」の羅針盤です。**
+PyTorch の `autograd` はこの羅針盤を自動で計算してくれる仕組みです。

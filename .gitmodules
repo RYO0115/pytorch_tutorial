@@ -1,0 +1,9 @@
+[submodule ".claude/skills/git-dev-workflow"]
+	path = .claude/skills/git-dev-workflow
+	url = https://github.com/RYO0115/git-dev-workflow.git
+[submodule ".claude/skills/pyhton-dev-workflow"]
+	path = .claude/skills/pyhton-dev-workflow
+	url = https://github.com/RYO0115/python-dev-workflow.git
+[submodule ".claude/skills/submodule-delegation"]
+	path = .claude/skills/submodule-delegation
+	url = https://github.com/RYO0115/subagent-delegation.git
