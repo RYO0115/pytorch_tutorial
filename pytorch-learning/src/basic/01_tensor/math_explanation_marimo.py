@@ -26,13 +26,9 @@ def _():
 
     plt.rcParams["font.family"] = ["Hiragino Sans", "DejaVu Sans"]
     plt.rcParams["axes.unicode_minus"] = False
+    return mpatches, np, plt, torch
 
-    return Axes3D, mpatches, np, plt, torch
 
-
-# ============================================================
-# Section 1: テンソルの生成
-# ============================================================
 @app.cell(hide_code=True)
 def _(mo):
     mo.md("""
@@ -56,7 +52,7 @@ def _(mo):
 
 
 @app.cell
-def _(np, plt, torch):
+def _(plt, torch):
     torch.manual_seed(0)
     _rand = torch.rand(2, 3).numpy()
     _ones = torch.ones(2, 3).numpy()
@@ -85,12 +81,9 @@ def _(np, plt, torch):
     plt.suptitle("テンソルの生成：shape (2, 3) の例", fontsize=12, fontweight="bold", y=1.02)
     plt.tight_layout()
     fig1
-    return axes1, fig1
+    return
 
 
-# ============================================================
-# Section 2: インデックスとスライス
-# ============================================================
 @app.cell(hide_code=True)
 def _(mo):
     mo.md("""
@@ -121,8 +114,8 @@ def _(mo):
     return slice_idx_i, slice_idx_j, slice_mode
 
 
-@app.cell
-def _(np, plt, slice_idx_i, slice_idx_j, slice_mode, torch):
+@app.cell(hide_code=True)
+def _(plt, slice_idx_i, slice_idx_j, slice_mode, torch):
     _A = torch.ones(4, 4)
     _A[:, 1] = 0
     _A[1, 2] = 0
@@ -195,12 +188,9 @@ def _(np, plt, slice_idx_i, slice_idx_j, slice_mode, torch):
     plt.suptitle("インデックスとスライスの可視化", fontsize=12, fontweight="bold", y=1.02)
     plt.tight_layout()
     fig2
-    return axes2, fig2
+    return
 
 
-# ============================================================
-# Section 3: テンソルの連結
-# ============================================================
 @app.cell(hide_code=True)
 def _(mo):
     mo.md("""
@@ -228,12 +218,12 @@ def _(mo):
 
 
 @app.cell
-def _(cat_dim, np, plt, torch):
+def _(cat_dim, mpatches, np, plt, torch):
     _A = torch.ones(4, 4)
     _A[:, 1] = 0
     _A[1, 2] = 0
     _dim = cat_dim.value
-    _cat = torch.cat([_A, _A, _A], dim=_dim).numpy()
+    _cat = torch.cat([_A, _A, _A], dim=_dim).numpy() # ここで連結
     _A_np = _A.numpy()
 
     _colors = ["#aec6e8", "#ffd5a8", "#b8f0b8"]
@@ -277,19 +267,16 @@ def _(cat_dim, np, plt, torch):
     plt.suptitle("torch.cat によるテンソルの連結", fontsize=12, fontweight="bold", y=1.02)
     plt.tight_layout()
     fig3
-    return axes3, fig3
+    return
 
 
-# ============================================================
-# Section 4: 行列積
-# ============================================================
 @app.cell(hide_code=True)
 def _(mo):
     mo.md("""
     ---
     ## 4. 行列積（Matrix Multiplication）
 
-    $$C_{ij} = \\sum_{k=0}^{n-1} A_{ik} \\cdot (A^\\top)_{kj}$$
+    $$C_{ij} = \sum_{k=0}^{n-1} A_{ik} \cdot (A^\\top)_{kj}$$
 
     **スライダー**で行 $i$ と列 $j$ を選ぶと、$C[i,j]$ がどの要素の掛け算から計算されるかを確認できます。
     """)
@@ -304,7 +291,7 @@ def _(mo):
     return mm_i, mm_j
 
 
-@app.cell
+@app.cell(hide_code=True)
 def _(mm_i, mm_j, np, plt, torch):
     _A = torch.ones(4, 4)
     _A[:, 1] = 0
@@ -371,28 +358,26 @@ def _(mm_i, mm_j, np, plt, torch):
     plt.suptitle(f"行列積のしくみ：C[{_i},{_j}] = A の第{_i}行 · A^T の第{_j}列", fontsize=12, fontweight="bold", y=1.02)
     plt.tight_layout()
     fig4
-    return axes4, fig4
+    return
 
 
-# ============================================================
-# Section 5: 要素積
-# ============================================================
 @app.cell(hide_code=True)
 def _(mo):
     mo.md("""
     ---
     ## 5. 要素積（Element-wise Product / Hadamard Product）
 
-    $$Z_{ij} = A_{ij} \\cdot B_{ij}$$
+    $$Z_{ij} = A_{ij} \cdot B_{ij}$$
 
     **同じ位置** の要素同士だけを掛け合わせます。行列積と違い shape は変わりません。
     """)
     return
 
 
-@app.cell
+@app.cell(hide_code=True)
 def _(plt, torch):
     _A = torch.ones(4, 4)
+    _A[2, 2] = 2
     _A[:, 1] = 0
     _A[1, 2] = 0
     _A_np = _A.numpy()
@@ -433,7 +418,7 @@ def _(plt, torch):
     plt.suptitle("要素積：同じ位置の要素同士を掛け合わせる（0²=0, 1²=1）", fontsize=12, fontweight="bold", y=1.02)
     plt.tight_layout()
     fig5
-    return axes5, fig5
+    return
 
 
 @app.cell(hide_code=True)
@@ -450,9 +435,6 @@ def _(mo):
     return
 
 
-# ============================================================
-# Section 6: べき乗
-# ============================================================
 @app.cell(hide_code=True)
 def _(mo):
     mo.md("""
@@ -465,7 +447,7 @@ def _(mo):
 
     $$Z_{ij} = A_{ij}^n$$
 
-    `tensor.pow(2)` と `tensor * tensor` は数値的に同じ結果です（$A^{\\odot 2} = A \\odot A$）。
+    `tensor.pow(2)` と `tensor * tensor` は数値的に同じ結果です（$A^{\odot 2} = A \odot A$）。
     """)
     return
 
@@ -478,7 +460,7 @@ def _(mo):
 
 
 @app.cell
-def _(np, plt, pow_n, torch):
+def element_wise_power(np, plt, pow_n, torch):
     _A = torch.ones(4, 4)
     _A[:, 1] = 0
     _A[1, 2] = 0
@@ -486,8 +468,8 @@ def _(np, plt, pow_n, torch):
     _n = pow_n.value
     _Z_pow = (_A ** _n).numpy()
 
-    fig6, axes6 = plt.subplots(1, 3, figsize=(11, 3.5),
-                                gridspec_kw={"width_ratios": [1, 0.3, 1]})
+    fig6, axes6 = plt.subplots(1, 4, figsize=(13, 3.5),
+                                gridspec_kw={"width_ratios": [1, 0.3, 1, 0.9]})
 
     _im_a = axes6[0].imshow(_A_np, cmap="Blues", vmin=0, vmax=1.3, alpha=0.4)
     fig6.colorbar(_im_a, ax=axes6[0], shrink=0.8)
@@ -512,23 +494,19 @@ def _(np, plt, pow_n, torch):
     axes6[2].set_yticks([])
 
     _x_line = np.linspace(0, 1, 100)
-    _inset = axes6[2].inset_axes([0.55, 0.55, 0.42, 0.42])
-    _inset.plot(_x_line, _x_line ** _n, color="orangered", lw=2)
-    _inset.set_xlim(0, 1)
-    _inset.set_xlabel("x", fontsize=7)
-    _inset.set_ylabel(f"x^{_n}", fontsize=7)
-    _inset.set_title(f"y=x^{_n}", fontsize=7)
-    _inset.grid(True, alpha=0.3)
+    axes6[3].plot(_x_line, _x_line ** _n, color="orangered", lw=2)
+    axes6[3].set_xlim(0, 1)
+    axes6[3].set_xlabel("x", fontsize=9)
+    axes6[3].set_ylabel(f"x^{_n}", fontsize=9)
+    axes6[3].set_title(f"y = x^{_n}", fontsize=11)
+    axes6[3].grid(True, alpha=0.3)
 
     plt.suptitle(f"べき乗：各要素を {_n} 乗する（スライダーで n を変更）", fontsize=12, fontweight="bold", y=1.02)
     plt.tight_layout()
     fig6
-    return axes6, fig6
+    return
 
 
-# ============================================================
-# Section 7: 偏微分
-# ============================================================
 @app.cell(hide_code=True)
 def _(mo):
     mo.md("""
@@ -541,11 +519,11 @@ def _(mo):
 
     複数の変数を持つ関数で、**注目する変数以外をすべて定数とみなして微分する**操作。
 
-    $$\\frac{\\partial f}{\\partial w} \\approx \\frac{f(w+\\varepsilon, b) - f(w, b)}{\\varepsilon}$$
+    $$\\frac{\partial f}{\partial w} \\approx \\frac{f(w+\\varepsilon, b) - f(w, b)}{\\varepsilon}$$
 
     ### 具体例：$f(w, b) = w^2 + wb + b^2$
 
-    $$\\frac{\\partial f}{\\partial w} = 2w + b \\qquad \\frac{\\partial f}{\\partial b} = w + 2b$$
+    $$\\frac{\partial f}{\partial w} = 2w + b \qquad \\frac{\partial f}{\partial b} = w + 2b$$
 
     スライダーで $(w, b)$ の値を変えると、偏微分の値と「勾配の向き」がリアルタイムで変わります。
     """)
@@ -560,7 +538,7 @@ def _(mo):
     return pd_b, pd_w
 
 
-@app.cell
+@app.cell(hide_code=True)
 def _(np, pd_b, pd_w, plt):
     _w0 = pd_w.value
     _b0 = pd_b.value
@@ -634,7 +612,7 @@ def _(np, pd_b, pd_w, plt):
         fontsize=12, fontweight="bold", y=1.02)
     plt.tight_layout()
     fig7
-    return axes7, fig7
+    return
 
 
 @app.cell(hide_code=True)
@@ -645,7 +623,7 @@ def _(mo):
 
     偏微分を使ってパラメータを更新するアルゴリズムを **勾配降下法** といいます。
 
-    $$w \\leftarrow w - \\alpha \\cdot \\frac{\\partial L}{\\partial w}, \\qquad b \\leftarrow b - \\alpha \\cdot \\frac{\\partial L}{\\partial b}$$
+    $$w \leftarrow w - \\alpha \cdot \\frac{\partial L}{\partial w}, \qquad b \leftarrow b - \\alpha \cdot \\frac{\partial L}{\partial b}$$
 
     スライダーで学習率と初期値を変えて、勾配降下の軌跡を観察してください。
     """)
@@ -726,7 +704,7 @@ def _(gd_b0, gd_lr, gd_steps, gd_w0, np, plt):
         fontsize=12, fontweight="bold", y=1.02)
     plt.tight_layout()
     fig8
-    return axes8, fig8
+    return
 
 
 @app.cell(hide_code=True)
@@ -749,8 +727,10 @@ def _(mo):
 
     | PyTorch | 数学 | 意味 |
     |:---|:---|:---|
-    | `w.grad` | $\\nabla_w L$ | w の各要素に対する損失の偏微分 |
-    | `b.grad` | $\\nabla_b L$ | b の各要素に対する損失の偏微分 |
+    | `w.grad` | $
+    abla_w L$ | w の各要素に対する損失の偏微分 |
+    | `b.grad` | $
+    abla_b L$ | b の各要素に対する損失の偏微分 |
     | `loss.backward()` | 連鎖律 | 計算グラフを逆向きに辿って全偏微分を自動計算 |
 
     ### 学習ループにおける偏微分の位置づけ
@@ -769,9 +749,6 @@ def _(mo):
     return
 
 
-# ============================================================
-# Section: 収束条件 — 偏微分がゼロになると学習完了
-# ============================================================
 @app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
@@ -782,7 +759,7 @@ def _(mo):
 
     損失関数 $f(w, b) = w^2 + wb + b^2$ を例にとります。
 
-    $$\frac{\partial f}{\partial w} = 2w + b, \qquad \frac{\partial f}{\partial b} = w + 2b$$
+    $$\\frac{\partial f}{\partial w} = 2w + b, \qquad \\frac{\partial f}{\partial b} = w + 2b$$
 
     **偏微分の意味**：その変数の方向に少し動いたとき、損失がどれだけ増えるかの傾きです。
 
@@ -796,11 +773,11 @@ def _(mo):
 
     偏微分が完全にゼロになることは実際にはないため、**勾配ノルム**（勾配ベクトルの大きさ）で判断します：
 
-    $$\|\nabla f\| = \sqrt{\left(\frac{\partial f}{\partial w}\right)^2 + \left(\frac{\partial f}{\partial b}\right)^2} < \varepsilon$$
+    $$\|\\nabla f\| = \sqrt{\left(\\frac{\partial f}{\partial w}\\right)^2 + \left(\\frac{\partial f}{\partial b}\\right)^2} < \\varepsilon$$
 
-    閾値 $\varepsilon$（例：$10^{-4}$）を下回ったら「十分に収束した」とみなします。
+    閾値 $\\varepsilon$（例：$10^{-4}$）を下回ったら「十分に収束した」とみなします。
 
-    #### 手計算で確認（初期値 $w=2,\ b=-2$、学習率 $\alpha=0.2$）
+    #### 手計算で確認（初期値 $w=2,\ b=-2$、学習率 $\\alpha=0.2$）
 
     ```
     step 0:  w= 2.0000, b=-2.0000  →  ∂f/∂w= 2.0000, ∂f/∂b=-2.0000,  ‖∇f‖= 2.828
@@ -933,7 +910,7 @@ def _(gd_b0, gd_lr, gd_steps, gd_w0, np, plt):
                  fontsize=12, fontweight="bold", y=1.02)
     plt.tight_layout()
     fig9
-    return axes9, fig9
+    return
 
 
 @app.cell(hide_code=True)
@@ -976,9 +953,6 @@ def _(mo):
     return
 
 
-# ============================================================
-# まとめ
-# ============================================================
 @app.cell(hide_code=True)
 def _(mo):
     mo.md("""
@@ -988,13 +962,14 @@ def _(mo):
     | コード | 数学記法 | 演算の種類 |
     |--------|---------|-----------|
     | `tensor @ tensor.T` | $A A^\\top$ | 行列積 |
-    | `tensor * tensor` | $A \\odot A$ | 要素積（アダマール積） |
-    | `tensor.pow(n)` | $A^{\\odot n}$ | 要素ごとのべき乗 |
-    | `tensor[i]` | $\\mathbf{a}_{i,:}$ | 第 $i$ 行ベクトルの抽出 |
-    | `tensor[:, j]` | $\\mathbf{a}_{:,j}$ | 第 $j$ 列ベクトルの抽出 |
+    | `tensor * tensor` | $A \odot A$ | 要素積（アダマール積） |
+    | `tensor.pow(n)` | $A^{\odot n}$ | 要素ごとのべき乗 |
+    | `tensor[i]` | $\mathbf{a}_{i,:}$ | 第 $i$ 行ベクトルの抽出 |
+    | `tensor[:, j]` | $\mathbf{a}_{:,j}$ | 第 $j$ 列ベクトルの抽出 |
     | `tensor.T` | $A^\\top$ | 転置 |
-    | `loss.backward()` | $\\nabla L$ を計算 | 連鎖律による全偏微分の自動計算 |
-    | `w.grad` | $\\frac{\\partial L}{\\partial w}$ | w に関する損失の偏微分 |
+    | `loss.backward()` | $
+    abla L$ を計算 | 連鎖律による全偏微分の自動計算 |
+    | `w.grad` | $\\frac{\partial L}{\partial w}$ | w に関する損失の偏微分 |
     """)
     return
 
